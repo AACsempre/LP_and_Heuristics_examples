@@ -1,0 +1,198 @@
+model TSP_Heuristic__nearestORfarthestORcheapest_insertion
+
+uses "mmive"	
+
+!setparam("XPRS_MAXTIME",60)
+
+declarations
+	
+	algor = 1		!Select nearest-> 1 ; farthest-> 2 ; cheapest -> 3
+	node_ini = 1	!select starting node
+		
+	Nodes = 100				!number of cities (nodes)
+	N = 1..Nodes			!set of nodes
+	!xxx decision variables xxxx
+	!parameters
+	c: array(N,N) of real	!cost for the least-cost path
+	x: array(N,N) of integer 	!1 if node j is visited after j, 0 otherwise
+
+	zcount: integer
+	Stop: integer
+	visited: array(N) of integer
+	c_aux: real
+	
+	jj: integer
+
+	i_min: integer
+	j_min: integer
+		
+	k_min: integer	
+	
+	u: array(N) of integer
+	u_aux: integer
+	u_count: integer
+	
+	!coordinates
+	XC: array(N) of real !X-coord of nodes
+	YC: array(N) of real !Y-coord of nodes
+	IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmaxYC: real		
+end-declarations
+
+!---------------------------------------------
+!Model data
+setrandseed(1)
+
+forall(i in N) do
+	XC(i):=round(100*random)
+	YC(i):=round(100*random)
+end-do
+
+forall(i,j in N)
+	c(i,j):=round(sqrt((XC(i)-XC(j))^2+(YC(i)-YC(j))^2))
+
+!---------------------------------------------
+!Algorithm 
+
+(!	!RESET if sequential
+zcount:= 0				!counter
+Stop:= 0 				!stop criteria
+forall(j,i in N|j<>i) do
+	x(i,j):= 0
+end-do
+forall(i in N) do
+	visited(i):= 0
+end-do
+!)
+
+visited(node_ini) := 1			!1. Initialization
+zcount := 1
+	
+	c_aux:= 999999999
+	 forall(j in N|j<>node_ini and visited(j)=0) do
+		if c(node_ini,j) < c_aux then
+			c_aux := c(node_ini,j)
+			j_min := j
+		end-if
+	 end-do
+	visited(j_min) := 1
+	x(node_ini,j_min) := 1
+		
+while (Stop=0) do	
+	zcount := zcount + 1
+
+	if algor = 1 then						!nearest insertion algorithm	
+	 c_aux:= 999999999								!2. Selection
+	 forall(i,k in N|i<>k and visited(i)=1 and visited(k)=0) do
+		if c(i,k) < c_aux then
+			c_aux := c(i,k)
+			k_min := k
+		end-if
+	 end-do
+	elif algor = 2 then						!farthest insertion algorithm
+	 c_aux:= 0
+	 forall(i,k in N|i<>k and visited(i)=1 and visited(k)=0) do
+		if c(i,k) > c_aux then
+			c_aux := c(i,k)
+			k_min := k
+		end-if
+	 end-do
+	elif algor = 3 then						!cheapest insertion algorithm
+	 c_aux:= 999999999
+	 forall(i,j,k in N|i<>k and i<>j and j<>k and x(i,j)=1 and visited(k)=0) do
+		if c(i,k) + c(j,k) - c(i,j) < c_aux then
+			c_aux := c(i,k) + c(j,k) - c(i,j)
+			k_min := k
+			i_min := i
+			j_min := j
+		end-if
+	 end-do
+	end-if 
+
+	if algor = 1 or algor = 2 then
+	 c_aux:= 999999999								!3. Insertion
+	 forall(i,j in N|i<>j and visited(i)=1 and visited(j)=1 and x(i,j)=1) do
+		if c(i,k_min) + c(j,k_min) - c(i,j) < c_aux then
+			c_aux := c(i,k_min) + c(j,k_min) - c(i,j)
+			i_min := i
+			j_min := j
+		end-if
+	 end-do
+	end-if
+		x(i_min,j_min) := 0
+		x(i_min,k_min) := 1
+		x(k_min,j_min) := 1
+		visited(k_min):=1
+		
+	if sum(i in N) visited(i) = Nodes then			!4. Termination
+		forall(i in N) do
+			if sum(j in N) x(i,j) = 0 then 			!arc from last-but-1 to ini
+			x(i,node_ini) := 1
+			end-if
+		end-do
+		Stop:=1 
+	end-if
+
+end-do
+
+Cost:=sum(i,j in N|i<>j) c(i,j)*x(i,j)
+
+!obtain final order u
+u(node_ini) := 1
+u_aux := node_ini
+u_count := 0
+
+while (sum(k in N) u(k) <> sum(m in N) m) do
+forall(i,j in N|i<>j) do
+	if x(i,j)>0.99 and u(i) = 0 then 
+		if j = u_aux then
+		u_count := u_count + 1
+		u(i) := Nodes + 1 - u_count	
+		u_aux := i
+		end-if
+	end-if	
+end-do
+end-do
+
+!---------------------------------------------
+!Graphic Display
+
+!min e max coordenadas para desenho
+IVEmin_XC := min(j in N) XC(j)-(max(j in N) XC(j)/15)
+IVEmin_YC := min(j in N) YC(j)-(max(j in N) YC(j)/15)
+IVEmax_XC := max(j in N) XC(j)+(max(j in N) XC(j)/15)	
+IVEmax_YC := max(j in N) YC(j)+(max(j in N) YC(j)/10)
+!Define Display Area
+IVEzoom(IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmax_YC)
+!Define Display Plots/Layers
+Plot1:=IVEaddplot("Tour",IVE_BLACK)
+Plot2:=IVEaddplot("Nodes",IVE_RED)
+!Plot Graphic Features
+forall(j in N) 
+	IVEdrawlabel(Plot2,XC(j),YC(j),strfmt(j,2))
+forall(i,j in N)
+	if getsol(x(i,j))>0.99 then 
+		IVEdrawline(Plot1,XC(i),YC(i),XC(j),YC(j))
+	end-if
+
+!Write Res
+writeln
+write ("Cost = ",Cost)
+writeln
+writeln
+write ("from to")
+writeln	
+forall(i,j in N) do
+	if x(i,j)>0.99 then 
+		write (i," to ",j)
+		writeln
+	end-if
+end-do
+writeln
+write ("node = order")
+writeln	
+forall(i in N) do
+		write (i, " = ", u(i), "º")
+		writeln
+end-do
+
+end-model

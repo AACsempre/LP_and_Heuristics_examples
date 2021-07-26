@@ -1,0 +1,101 @@
+model TSP_Linear_Programming_Random_Problem
+
+uses "mmxprs","mmive"
+
+setparam("XPRS_MAXTIME",60)
+
+declarations
+	Nodes = 35				!number of cities (nodes)
+	N = 1..Nodes			!set of nodes
+	!decision variables
+	x: array(N,N) of mpvar	!1 if node j is visited after j, 0 otherwise
+	u: array(N) of mpvar	!order of visit of node i
+	!parameters
+	c: array(N,N) of real	!cost for the least-cost path
+	!coordinates
+	XC: array(N) of integer !X-coord of nodes
+	YC: array(N) of integer !Y-coord of nodes
+	IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmaxYC: real
+end-declarations
+
+!---------------------------------------------
+!Model data
+
+setrandseed(1)
+
+forall(i in N) do
+	XC(i):=round(100*random)
+	YC(i):=round(100*random)
+end-do
+
+forall(i,j in N)
+	c(i,j):=round(sqrt((XC(i)-XC(j))^2+(YC(i)-YC(j))^2))
+
+!---------------------------------------------
+!Model formulation
+
+Cost:=sum(i,j in N|i<>j) c(i,j)*x(i,j)
+
+forall(j in N)
+	sum (i in N|i<>j) x(i,j) = 1
+	
+forall(i in N)
+	sum (j in N|i<>j) x(i,j) = 1
+	
+forall(i,j in N|i>1 and j>1 and i<>j)
+	u(i)-u(j)+(Nodes-1)*x(i,j)<=Nodes-2
+	
+forall(i in N|i>1)
+	u(i)>=1
+
+forall(i in N|i>1)
+	u(i)<=Nodes-1
+
+forall(i,j in N)
+	x(i,j) is_binary
+
+minimize (Cost)
+
+!---------------------------------------------
+!Graphic Display
+
+!min e max coordenadas para desenho
+IVEmin_XC := min(j in N) XC(j)-(max(j in N) XC(j)/15)
+IVEmin_YC := min(j in N) YC(j)-(max(j in N) YC(j)/15)
+IVEmax_XC := max(j in N) XC(j)+(max(j in N) XC(j)/15)	
+IVEmax_YC := max(j in N) YC(j)+(max(j in N) YC(j)/10)
+!Define Display Area
+IVEzoom(IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmax_YC)
+!Define Display Plots/Layers
+Plot1:=IVEaddplot("Tour",IVE_BLACK)
+Plot2:=IVEaddplot("Nodes",IVE_RED)
+!Plot Graphic Features
+forall(j in N) 
+	IVEdrawlabel(Plot2,XC(j),YC(j),strfmt(j,2))
+forall(i,j in N)
+	if getsol(x(i,j))>0.99 then 
+		IVEdrawline(Plot1,XC(i),YC(i),XC(j),YC(j))
+	end-if
+
+!Write Res
+writeln
+write ("Cost = ",getobjval)
+writeln
+writeln
+write ("from to")
+writeln	
+forall(i,j in N) do
+	if getsol(x(i,j))>0.99 then 
+		write (i," to ",j)
+		writeln
+	end-if
+end-do
+writeln
+write ("node = order")
+writeln	
+forall(i in N) do
+		write (i, " = ",  getsol(u(i))+1, "º")
+		writeln
+end-do
+
+end-model

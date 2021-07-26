@@ -1,0 +1,104 @@
+model SPP_Dijkstra
+!Caminhos ótimos em redes - ALGORITMO DE DIJKSTRA	
+uses "mmive"
+
+declarations
+	
+	Nodes = 11
+	!sets
+	N = 1..Nodes
+	!data
+	c: array (N,N) of real !Cost vector
+	A: dynamic array (N,N) of real ! Auxiliar vector
+	d: array(N) of real
+	L: array(N) of real
+	Fix:real
+
+end-declarations
+
+!---------------------------------------------
+! Model Data
+No:=0
+
+	!	1	2	3	4	5	6	7	8	9	10	11
+c:: [	0,	1,	No,	No,	10,	No,	No,	9,	No,	No,	No, 	!1
+		1,	0,	1,	No,	5,	No,	No,	No,	No,	No,	No,		!2
+		No,	No,	0,	10,	2,	6,	No,	No,	No,	No,	No,		!3
+		No,	No,	No,	0,	No,	4,	7,	No,	No,	No,	5,		!4
+		No,	5,	No,	No,	0,	2,	No,	1,	4,	No,	No,		!5
+		No,	No,	No,	4,	No,	0,	9,	No,	1,	10,	No,		!6
+		No,	No,	No,	No,	No,	No,	0,	No,	No,	1,	2,		!7
+		9,	No,	No,	No,	1,	No,	No,	0,	2,	No,	No,		!8
+		No,	No,	No,	No,	No,	No,	No,	No,	0,	1,	No,		!9
+		No,	No,	No,	No,	No,	10,	1,	No,	No,	0,	No,		!10
+		No,	No,	No,	No,	No,	No,	No,	No,	No,	No,	0]		!11
+
+forall(i,j in N|c(i,j)<>No)
+	A(i,j):=1
+
+!************************* ALGORITMO DE DIJKSTRA *************************
+
+Infinite:=10000
+
+forall (s in N) do  		!pode não ser possível...
+	
+!Initialization			
+d(s):=0					
+L(s):=0					
+forall(j in N|j<>s) do	
+	d(j):=Infinite
+	L(j):=1 	
+end-do
+i:=s
+
+repeat
+	Stop:=1
+
+!Update
+	forall(j in N|A(i,j)=1 and L(j)=1)
+		if d(j)>d(i)+c(i,j) then
+			d(j):=d(i)+c(i,j)
+			p(j):=i
+		end-if
+	
+!Closure	
+	Stop2:=0
+	Fix:=Infinite
+	forall(j in N|L(j)=1)
+		if d(j)<Fix then
+			Fix:=d(j)
+			i:=j
+			Stop2:=1
+		end-if
+	L(i):=0
+
+!Termination
+	forall(j in N)
+		if L(j)=1 then
+			Stop:=0
+			k:=i
+		end-if
+		if Stop2 = 0 then
+			Stop:=1
+		end-if
+		
+until Stop=1
+
+if Stop2 = 1 then
+	forall(j in N)
+		if j=Nodes and s=Nodes then
+			write (d(j))
+		else
+			write (d(j),",")
+		end-if
+else
+	write ("origin at node ",s," is not possible!")
+end-if
+writeln
+		
+end-do						!all-to-all	
+end-model
+
+
+
+

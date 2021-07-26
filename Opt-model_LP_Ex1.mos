@@ -1,0 +1,49 @@
+model Simple_optimization_model_example
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+!parameters
+!	A = 40
+!	B = 40
+!	C = 200
+!end-parameters
+
+!sample declarations section
+declarations
+		! Conjuntos				
+		
+		! Variáveis de decisão
+			X1: mpvar
+			X2: mpvar
+		
+		! Parâmetros/Dados
+								
+end-declarations
+
+! Data 
+ A:= 40	!alternative do parameter declaration
+ B:= 40	!alternative do parameter declaration
+ C:= 200	!alternative do parameter declaration
+
+!Objective-function
+L := 57 * X1 + 60 * X2
+
+!Constraints
+8 * X1 + 4 * X2 <= A
+4 * X1 + 5 * X2 <= B
+50 * X1 + 13 * X2 <= C
+	
+!O.F. type
+maximize(L)
+
+
+!Text output
+writeln("Hello World")
+writeln
+writeln("L = ", strfmt(getobjval,10,3))
+writeln
+writeln("X1 = ",strfmt(getsol(X1),-1,3))
+writeln("X2 = ",strfmt(getsol(X2),-1,3))
+writeln
+writeln("End running model")
+
+end-model

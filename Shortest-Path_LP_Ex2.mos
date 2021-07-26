@@ -1,0 +1,114 @@
+model Linear_Programming_SP
+!2.Caminhos ótimos em redes 
+
+uses "mmxprs","mmive"
+
+declarations
+	Nodes = 11
+	!sets
+	N = 1..Nodes
+	!decision variables
+	x: array (N,N) of mpvar !Flow matrix	
+	!data
+	c: array (N,N) of real !Cost vector
+	b: array (N) of real !Supply and demand vector
+!	u: array (N,N) of real ! Capacity vector
+!	l: array (N,N) of real ! Min_limit vector
+	A: dynamic array (N,N) of real ! Auxiliar vector
+	!graphic parameters
+	XC: array(N) of real !X-coord of nodes
+	YC: array(N) of real !Y-coord of nodes
+	IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmaxYC: real
+end-declarations
+
+!---------------------------------------------
+! Model Data
+No:=999999
+
+c:: [	0,	1,	No,	No,	10,	No,	No,	9,	No,	No,	No, 	!1
+		1,	0,	1,	No,	5,	No,	No,	No,	No,	No,	No,		!2
+		No,	No,	0,	10,	2,	6,	No,	No,	No,	No,	No,		!3
+		No,	No,	No,	0,	No,	4,	7,	No,	No,	No,	5,		!4
+		No,	5,	No,	No,	0,	2,	No,	1,	4,	No,	No,		!5
+		No,	No,	No,	4,	No,	0,	9,	No,	1,	10,	No,		!6
+		No,	No,	No,	No,	No,	No,	0,	No,	No,	1,	2,		!7
+		9,	No,	No,	No,	1,	No,	No,	0,	2,	No,	No,		!8
+		No,	No,	No,	No,	No,	No,	No,	No,	0,	1,	No,		!9
+		No,	No,	No,	No,	No,	10,	1,	No,	No,	0,	No,		!10
+		No,	No,	No,	No,	No,	No,	No,	No,	No,	No,	0]		!11
+
+forall(i,j in N|c(i,j)<>No)			!conjunto dos Arcos
+	A(i,j):=1
+	
+b:: [ -1, -1, 10, -1, -1, -1, -1, -1, -1, -1, -1]
+
+!---------------------------------------------
+!Model Formulation
+
+!Objective function
+Cost:=sum(i,j in N|A(i,j)=1) c(i,j)*x(i,j)
+
+!Continuity Constraints	
+forall(i in N)
+	sum (j in N|A(i,j)=1) x(i,j) - sum(j in N|A(j,i)=1) x(j,i) = b(i)
+
+
+!min or max
+minimize(Cost)	
+
+!---------------------------------------------
+!Text output
+write("Solution = ", strfmt(getobjval,10,3))
+writeln
+writeln
+writeln("WHEN x(i,j) > 0")
+writeln("(i,j)  _  x :")
+forall(i,j in N)  do
+	if  getsol(x(i,j))>0.01 then
+		writeln("(",i,",",j,") _ ",strfmt(getsol(x(i,j)),3))
+	end-if
+end-do
+writeln
+
+!Graphic Display
+!Coordinates
+XC::[ 0,  0, 10, 20,  5, 15, 30,  0, 10, 25, 30]
+YC::[ 5, 10, 10, 10,  5,  5,  5,  0,  0,  0, 10]
+!min e max coordenadas para desenho
+IVEmin_XC := min(j in N) XC(j)-(max(j in N) XC(j)/15)
+IVEmin_YC := min(j in N) YC(j)-(max(j in N) YC(j)/15)
+IVEmax_XC := max(j in N) XC(j)+(max(j in N) XC(j)/15)	
+IVEmax_YC := max(j in N) YC(j)+(max(j in N) YC(j)/10)
+!Define Display Area
+IVEzoom(IVEmin_XC,IVEmin_YC,IVEmax_XC,IVEmax_YC)
+
+!Define Display Plots/Layers
+Plot1:=IVEaddplot("Arc",IVE_BLACK)
+Plot2:=IVEaddplot("Used arc",IVE_BLUE)
+Plot3:=IVEaddplot("Amount of Flow",IVE_CYAN)
+Plot0:=IVEaddplot("Node",IVE_BLACK)
+Plot4:=IVEaddplot("Supply Node",IVE_GREEN)
+Plot5:=IVEaddplot("Demand Node",IVE_RED)
+
+!Plot Graphic Features
+forall(i,j in N) do
+	if A(i,j)=1 then
+		IVEdrawline(Plot1,XC(i),YC(i),XC(j),YC(j))
+		end-if
+	if getsol(x(i,j))>0.01 then
+		IVEdrawarrow(Plot2,XC(i),YC(i),XC(j),YC(j))
+		IVEdrawlabel(Plot3,(XC(i)+XC(j))/2,(YC(i)+YC(j))/2,strfmt(getsol(x(i,j)),2))
+	end-if
+end-do
+forall(i in N) do
+	IVEdrawlabel(Plot0,XC(i),YC(i)+IVEmax_YC/100,strfmt(i,2))
+	if b(i)>0 then
+		IVEdrawlabel(Plot4,XC(i),YC(i)+IVEmax_YC/100,strfmt(b(i),2))
+	end-if
+	if b(i)<0 then
+		IVEdrawlabel(Plot5,XC(i),YC(i)+IVEmax_YC/100,strfmt(-b(i),2))
+	end-if
+end-do
+
+end-model
+	
